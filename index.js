@@ -12,7 +12,7 @@ const {
   PermissionsBitField
 } = require("discord.js");
 
-// Servidor Web
+// Servidor Web (Render + UptimeRobot)
 const app = express();
 app.get("/", (req, res) => res.send("✅ BTF Bot Online"));
 app.listen(process.env.PORT || 3000);
@@ -30,6 +30,7 @@ const client = new Client({
 
 const STAFF_ROLE_ID = "1436399739397603428";
 const AVALIACAO_CHANNEL_ID = "1436393631790403796";
+const STAR = "<:972699744675717230:1436410165594423387>";
 
 // Status
 client.on("ready", () => {
@@ -87,8 +88,9 @@ client.on("messageCreate", async (message) => {
   });
 });
 
-// Ticket
+// Sistema de Tickets
 client.on("interactionCreate", async (interaction) => {
+  // Abrir Ticket
   if (interaction.isStringSelectMenu() && interaction.customId === "menu_ticket") {
     await interaction.deferReply({ ephemeral: true });
     const tipo = interaction.values[0];
@@ -128,28 +130,28 @@ client.on("interactionCreate", async (interaction) => {
     interaction.editReply({ content: `✅ Ticket criado: ${canal}` });
   }
 
-  // Resgatar Ticket (seta atendente)
+  // Resgatar Ticket
   if (interaction.isButton() && interaction.customId === "resgatar_ticket") {
     const canal = interaction.channel;
-    canal.setTopic(`Dono: ${canal.topic.match(/Dono: (\d+)/)[1]} | Atendido por: ${interaction.user.id}`);
+    const donoId = canal.topic.match(/Dono: (\d+)/)[1];
+    canal.setTopic(`Dono: ${donoId} | Atendido por: ${interaction.user.id}`);
     await interaction.reply({ content: `✅ Ticket resgatado por ${interaction.user}`, ephemeral: false });
   }
 
-  // Fechar Ticket
+  // Fechar Ticket → Avaliação
   if (interaction.isButton() && interaction.customId === "fechar_ticket") {
     const canal = interaction.channel;
     const donoId = canal.topic.match(/Dono: (\d+)/)[1];
-    const atendenteId = canal.topic.includes("Atendido por:") ? canal.topic.split("Atendido por: ")[1] : "Ninguém";
+    const atendenteId = canal.topic.split("Atendido por: ")[1];
 
     const dono = await client.users.fetch(donoId).catch(() => null);
     if (dono) {
-      const estrela = "<:972699744675717230:1436410165594423387>";
       const row = new ActionRowBuilder().addComponents(
         ...[1, 2, 3, 4, 5].map((n) =>
           new ButtonBuilder()
             .setCustomId(`avaliacao_${n}_${atendenteId}`)
-            .setLabel(estrela.repeat(n))
             .setStyle(ButtonStyle.Secondary)
+            .setEmoji({ id: "1436410165594423387", name: "972699744675717230" })
         )
       );
 
@@ -157,7 +159,7 @@ client.on("interactionCreate", async (interaction) => {
         embeds: [
           new EmbedBuilder()
             .setTitle("📋 Avaliação - BTF")
-            .setDescription("Avalie o atendimento clicando nas estrelas abaixo:")
+            .setDescription(`Avalie o atendimento clicando nas estrelas:`)
             .setColor("#9b59b6")
         ],
         components: [row],
@@ -171,14 +173,14 @@ client.on("interactionCreate", async (interaction) => {
   // Registrar Avaliação
   if (interaction.isButton() && interaction.customId.startsWith("avaliacao_")) {
     const [, nota, atendenteId] = interaction.customId.split("_");
-    const estrela = "<:972699744675717230:1436410165594423387>".repeat(nota);
+    const estrelas = STAR.repeat(nota);
     const canal = client.channels.cache.get(AVALIACAO_CHANNEL_ID);
 
     await canal.send({
       embeds: [
         new EmbedBuilder()
           .setTitle("📥 Nova Avaliação Recebida")
-          .setDescription(`Usuário: ${interaction.user}\nAtendente: <@${atendenteId}>\nAvaliação: ${estrela}`)
+          .setDescription(`👤 Usuário: ${interaction.user}\n🧑‍💼 Atendente: <@${atendenteId}>\n⭐ Avaliação: ${estrelas}`)
           .setColor("#9b59b6")
       ],
     });
