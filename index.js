@@ -1,27 +1,45 @@
 require("dotenv").config();
+const express = require("express");
 const {
   Client,
   GatewayIntentBits,
   Partials,
+  EmbedBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
-  PermissionsBitField,
-  EmbedBuilder,
+  PermissionsBitField
 } = require("discord.js");
 
+// ==============================
+// 🌐 Servidor Web para Render / UptimeRobot
+// ==============================
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("✅ BTF Bot está online e funcionando!");
+});
+
+// 🔥 Porta fixa (ou automática, se no Render)
+const PORT = process.env.PORT || 18012;
+app.listen(PORT, () => {
+  console.log(`🌐 Servidor web ativo na porta ${PORT}`);
+});
+
+// ==============================
+// 🤖 Inicialização do Bot Discord
+// ==============================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.DirectMessages
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel]
 });
 
-// 📌 IDs importantes
 const STAFF_ROLE_ID = "1436399739397603428";
 const AVALIACAO_CHANNEL_ID = "1436393631790403796";
 
@@ -31,7 +49,7 @@ const AVALIACAO_CHANNEL_ID = "1436393631790403796";
 client.once("ready", () => {
   client.user.setPresence({
     status: "online",
-    activities: [{ name: "🎟️Bot Oficial da BTF", type: 0 }],
+    activities: [{ name: "🎟️ Bot Oficial da BTF", type: 0 }]
   });
   console.log(`✅ Bot logado como ${client.user.tag}`);
 });
@@ -63,25 +81,25 @@ client.on("messageCreate", async (message) => {
           label: "Dúvidas",
           description: "Tire dúvidas sobre a liga ou servidor.",
           value: "duvida",
-          emoji: "<:bf1308afd6136988eb568df66534354b:1436387023333228594>",
+          emoji: "❓"
         },
         {
           label: "Reportar alguém",
           description: "Reporte um jogador.",
           value: "report",
-          emoji: "<:bf1308afd6136988eb568df66534354b:1436387023333228594>",
+          emoji: "⚠️"
         },
         {
           label: "Ownar um time",
           description: "Solicite a criação de um time.",
           value: "ownar",
-          emoji: "<:bf1308afd6136988eb568df66534354b:1436387023333228594>",
+          emoji: "🏆"
         },
         {
           label: "Outros assuntos",
           description: "Para solicitações diversas.",
           value: "outros",
-          emoji: "<:bf1308afd6136988eb568df66534354b:1436387023333228594>",
+          emoji: "📋"
         }
       );
 
@@ -90,8 +108,10 @@ client.on("messageCreate", async (message) => {
   }
 });
 
+// ==============================
+// 🎟️ Interações (Tickets + Avaliações)
+// ==============================
 client.on("interactionCreate", async (interaction) => {
-  // ======== ABRIR TICKET ========
   if (interaction.isStringSelectMenu() && interaction.customId === "menu_ticket") {
     await interaction.deferReply({ ephemeral: true });
 
@@ -102,7 +122,7 @@ client.on("interactionCreate", async (interaction) => {
 
     if (existente)
       return interaction.editReply({
-        content: `Você já possui um ticket aberto em ${existente}.`,
+        content: `Você já possui um ticket aberto em ${existente}.`
       });
 
     const canal = await interaction.guild.channels.create({
@@ -112,8 +132,8 @@ client.on("interactionCreate", async (interaction) => {
       permissionOverwrites: [
         { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
         { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-        { id: STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-      ],
+        { id: STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+      ]
     });
 
     const botoes = new ActionRowBuilder().addComponents(
@@ -148,7 +168,7 @@ client.on("interactionCreate", async (interaction) => {
     if (!staff.roles.cache.has(STAFF_ROLE_ID))
       return interaction.reply({
         content: "Apenas membros da equipe BTF podem resgatar tickets.",
-        ephemeral: true,
+        ephemeral: true
       });
 
     await canal.setTopic(`Dono: ${canal.topic.split(" | ")[0].replace("Dono: ", "")} | Atendido por: ${staff.user.tag}`);
@@ -161,7 +181,8 @@ client.on("interactionCreate", async (interaction) => {
     const donoId = canal.topic?.match(/Dono: (\d+)/)?.[1];
     const staff = canal.topic?.match(/Atendido por: (.+)/)?.[1] || "Ninguém";
 
-    if (!donoId) return interaction.reply({ content: "Erro ao identificar o dono do ticket.", ephemeral: true });
+    if (!donoId)
+      return interaction.reply({ content: "Erro ao identificar o dono do ticket.", ephemeral: true });
 
     const dono = await client.users.fetch(donoId).catch(() => null);
     if (dono) {
@@ -170,7 +191,7 @@ client.on("interactionCreate", async (interaction) => {
         .setDescription(
           `Seu atendimento foi encerrado.\n\nAtendente: **${staff}**\n\n` +
           "Por favor, avalie seu atendimento clicando em uma das estrelas abaixo:\n\n" +
-          "<:972699744675717230:1436410165594423387> <:972699744675717230:1436410165594423387> <:972699744675717230:1436410165594423387> <:972699744675717230:1436410165594423387> <:972699744675717230:1436410165594423387>"
+          "⭐ ⭐ ⭐ ⭐ ⭐"
         )
         .setColor("#2b2d31");
 
@@ -195,11 +216,9 @@ client.on("interactionCreate", async (interaction) => {
     const nota = interaction.customId.split("_")[1];
     const user = interaction.user;
     const avaliacoes = client.channels.cache.get(AVALIACAO_CHANNEL_ID);
-
     if (!avaliacoes) return;
 
-    const estrelas = "<:972699744675717230:1436410165594423387> ".repeat(nota);
-
+    const estrelas = "⭐ ".repeat(nota);
     const embed = new EmbedBuilder()
       .setTitle("⭐ Nova Avaliação Recebida - BTF")
       .setDescription(`Usuário: ${user}\nAvaliação: ${estrelas}`)
@@ -210,5 +229,9 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// 🚀 Login
-client.login(process.env.TOKEN);
+// ==============================
+// 🚀 Login do Bot
+// ==============================
+setTimeout(() => {
+  client.login(process.env.TOKEN);
+}, 3000);
