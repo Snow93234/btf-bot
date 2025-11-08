@@ -12,12 +12,12 @@ const {
   PermissionsBitField
 } = require("discord.js");
 
-// Servidor Web (Render + UptimeRobot)
+// Web Server
 const app = express();
 app.get("/", (req, res) => res.send("✅ BTF Bot Online"));
 app.listen(process.env.PORT || 3000);
 
-// Discord Client
+// Discord
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -32,7 +32,6 @@ const STAFF_ROLE_ID = "1436399739397603428";
 const AVALIACAO_CHANNEL_ID = "1436393631790403796";
 const STAR = "<:972699744675717230:1436410165594423387>";
 
-// Status
 client.on("ready", () => {
   client.user.setPresence({
     status: "online",
@@ -90,14 +89,18 @@ client.on("messageCreate", async (message) => {
 
 // Sistema de Tickets
 client.on("interactionCreate", async (interaction) => {
+
   // Abrir Ticket
   if (interaction.isStringSelectMenu() && interaction.customId === "menu_ticket") {
+
     await interaction.deferReply({ ephemeral: true });
+
     const tipo = interaction.values[0];
 
     const existente = interaction.guild.channels.cache.find(
       (c) => c.topic && c.topic.includes(`Dono: ${interaction.user.id}`)
     );
+
     if (existente)
       return interaction.editReply({ content: `⚠️ Você já possui um ticket aberto: ${existente}` });
 
@@ -146,12 +149,14 @@ client.on("interactionCreate", async (interaction) => {
 
     const dono = await client.users.fetch(donoId).catch(() => null);
     if (dono) {
+      const estrela = STAR;
+
       const row = new ActionRowBuilder().addComponents(
         ...[1, 2, 3, 4, 5].map((n) =>
           new ButtonBuilder()
             .setCustomId(`avaliacao_${n}_${atendenteId}`)
+            .setLabel(`${estrela} ${n}`)
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji({ id: "1436410165594423387", name: "972699744675717230" })
         )
       );
 
@@ -159,10 +164,10 @@ client.on("interactionCreate", async (interaction) => {
         embeds: [
           new EmbedBuilder()
             .setTitle("📋 Avaliação - BTF")
-            .setDescription(`Avalie o atendimento clicando nas estrelas:`)
+            .setDescription("Avalie o atendimento escolhendo uma nota de **1 a 5**.")
             .setColor("#9b59b6")
         ],
-        components: [row],
+        components: [row]
       }).catch(() => {});
     }
 
