@@ -12,12 +12,10 @@ const {
   PermissionsBitField
 } = require("discord.js");
 
-// Web Server
 const app = express();
 app.get("/", (req, res) => res.send("✅ BTF Bot Online"));
 app.listen(process.env.PORT || 3000);
 
-// Discord
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -28,6 +26,7 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
+// CONFIG
 const STAFF_ROLE_ID = "1436399739397603428";
 const AVALIACAO_CHANNEL_ID = "1436393631790403796";
 const STAR = "<:972699744675717230:1436410165594423387>";
@@ -40,7 +39,7 @@ client.on("ready", () => {
   console.log(`✅ Logado como ${client.user.tag}`);
 });
 
-// Painel
+// PAINEL
 client.on("messageCreate", async (message) => {
   if (message.author.bot || message.content !== "!painel") return;
 
@@ -49,12 +48,12 @@ client.on("messageCreate", async (message) => {
     .setDescription(
       "**BTF - Suporte**\n" +
       "Bem-vindo ao suporte oficial da BTF.\n\n" +
-      "Para agilizar o atendimento, selecione abaixo a categoria que melhor corresponde à sua solicitação. Forneça o máximo possível de informações para que nossa equipe possa compreender e resolver sua situação da melhor forma.\n\n" +
+      "Para agilizar o atendimento, selecione abaixo a categoria que melhor corresponde à sua solicitação.\n\n" +
       "**Observações importantes:**\n" +
-      "- Quanto mais detalhes forem informados (como imagens, descrições e horários aproximados), mais eficiente será o atendimento.\n" +
-      "- O atendimento é realizado por ordem de chegada.\n" +
-      "- O prazo máximo de resposta é de até **2 dias úteis**.\n\n" +
-      "**Escolha a categoria desejada no menu abaixo.**"
+      "- Quanto mais detalhes forem informados, mais eficiente será o atendimento.\n" +
+      "- O atendimento ocorre por ordem de chegada.\n" +
+      "- Prazo máximo de resposta: **2 dias úteis**.\n\n" +
+      "**Escolha a categoria no menu abaixo.**"
     )
     .setColor("#9b59b6")
     .setImage("https://media.discordapp.net/attachments/1436387855759835136/1436705826554380389/Captura_de_tela_2025-11-07_140150.png");
@@ -81,33 +80,30 @@ client.on("messageCreate", async (message) => {
       { label: "Outros assuntos", value: "outros", emoji: "📋" }
     );
 
-  await message.channel.send({
+  message.channel.send({
     embeds: [embed],
     components: [new ActionRowBuilder().addComponents(menu)],
   });
 });
 
-// Sistema de Tickets
+// SISTEMA DE TICKET
 client.on("interactionCreate", async (interaction) => {
 
-  // Abrir Ticket
+  // Criar Ticket
   if (interaction.isStringSelectMenu() && interaction.customId === "menu_ticket") {
-
     await interaction.deferReply({ ephemeral: true });
-
     const tipo = interaction.values[0];
 
     const existente = interaction.guild.channels.cache.find(
       (c) => c.topic && c.topic.includes(`Dono: ${interaction.user.id}`)
     );
-
     if (existente)
       return interaction.editReply({ content: `⚠️ Você já possui um ticket aberto: ${existente}` });
 
     const canal = await interaction.guild.channels.create({
       name: `ticket-${tipo}-${interaction.user.username}`,
       type: 0,
-      topic: `Dono: ${interaction.user.id} | Atendido por: Ninguém`,
+      topic: `Dono: ${interaction.user.id} | Atendido por: ninguém`,
       permissionOverwrites: [
         { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
         { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
@@ -120,11 +116,11 @@ client.on("interactionCreate", async (interaction) => {
       new ButtonBuilder().setCustomId("resgatar_ticket").setLabel("Resgatar Ticket").setStyle(ButtonStyle.Success)
     );
 
-    await canal.send({
+    canal.send({
       embeds: [
         new EmbedBuilder()
           .setTitle("🎫 Ticket Aberto")
-          .setDescription(`Olá ${interaction.user}, explique seu problema abaixo.`)
+          .setDescription(`Olá ${interaction.user}, explique sua solicitação abaixo.`)
           .setColor("#9b59b6"),
       ],
       components: [botoes],
@@ -135,13 +131,11 @@ client.on("interactionCreate", async (interaction) => {
 
   // Resgatar Ticket
   if (interaction.isButton() && interaction.customId === "resgatar_ticket") {
-    const canal = interaction.channel;
-    const donoId = canal.topic.match(/Dono: (\d+)/)[1];
-    canal.setTopic(`Dono: ${donoId} | Atendido por: ${interaction.user.id}`);
-    await interaction.reply({ content: `✅ Ticket resgatado por ${interaction.user}`, ephemeral: false });
+    interaction.channel.setTopic(interaction.channel.topic.replace("ninguém", interaction.user.id));
+    interaction.reply({ content: `✅ Ticket resgatado por ${interaction.user}`, ephemeral: false });
   }
 
-  // Fechar Ticket → Avaliação
+  // Fechar Ticket → Enviar Avaliação
   if (interaction.isButton() && interaction.customId === "fechar_ticket") {
     const canal = interaction.channel;
     const donoId = canal.topic.match(/Dono: (\d+)/)[1];
@@ -149,48 +143,46 @@ client.on("interactionCreate", async (interaction) => {
 
     const dono = await client.users.fetch(donoId).catch(() => null);
     if (dono) {
-      const estrela = STAR;
 
       const row = new ActionRowBuilder().addComponents(
         ...[1, 2, 3, 4, 5].map((n) =>
           new ButtonBuilder()
             .setCustomId(`avaliacao_${n}_${atendenteId}`)
-            .setLabel(`${estrela} ${n}`)
+            .setLabel(`${STAR} ${n}`)
             .setStyle(ButtonStyle.Secondary)
         )
       );
 
-      await dono.send({
+      dono.send({
         embeds: [
           new EmbedBuilder()
             .setTitle("📋 Avaliação - BTF")
-            .setDescription("Avalie o atendimento escolhendo uma nota de **1 a 5**.")
+            .setDescription(`Avalie o atendimento:`)
             .setColor("#9b59b6")
         ],
-        components: [row]
+        components: [row],
       }).catch(() => {});
     }
 
-    await interaction.reply({ content: "⏳ Ticket será fechado em 5 segundos...", ephemeral: true });
+    interaction.reply({ content: "⏳ Fechando em 5 segundos...", ephemeral: true });
     setTimeout(() => canal.delete().catch(() => {}), 5000);
   }
 
   // Registrar Avaliação
   if (interaction.isButton() && interaction.customId.startsWith("avaliacao_")) {
     const [, nota, atendenteId] = interaction.customId.split("_");
-    const estrelas = STAR.repeat(nota);
     const canal = client.channels.cache.get(AVALIACAO_CHANNEL_ID);
 
-    await canal.send({
+    canal.send({
       embeds: [
         new EmbedBuilder()
-          .setTitle("📥 Nova Avaliação Recebida")
-          .setDescription(`👤 Usuário: ${interaction.user}\n🧑‍💼 Atendente: <@${atendenteId}>\n⭐ Avaliação: ${estrelas}`)
+          .setTitle("📥 Nova Avaliação")
+          .setDescription(`👤 Usuário: ${interaction.user}\n🧑‍💼 Atendente: <@${atendenteId}>\n⭐ Nota: ${STAR} ${nota}/5`)
           .setColor("#9b59b6")
-      ],
+      ]
     });
 
-    await interaction.reply({ content: "✅ Avaliação registrada! Obrigado.", ephemeral: true });
+    interaction.reply({ content: "✅ Avaliação registrada! Obrigado.", ephemeral: true });
   }
 });
 
