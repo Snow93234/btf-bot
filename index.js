@@ -133,9 +133,18 @@ client.on("interactionCreate", async (interaction) => {
   // Resgatar Ticket
   if (interaction.isButton() && interaction.customId === "resgatar_ticket") {
     const canal = interaction.channel;
-    const donoId = canal.topic.match(/Dono: (\d+)/)[1];
 
-    // Atualiza o tópico com o atendente
+    // Verifica se é staff
+    if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
+      return interaction.reply({ content: "🚫 Apenas a equipe pode resgatar tickets.", ephemeral: true });
+    }
+
+    // Verifica se já foi resgatado
+    if (canal.topic.includes("Atendido por:") && !canal.topic.includes("Ninguém")) {
+      return interaction.reply({ content: "⚠️ Este ticket já foi resgatado por outro staff.", ephemeral: true });
+    }
+
+    const donoId = canal.topic.match(/Dono: (\d+)/)[1];
     canal.setTopic(`Dono: ${donoId} | Atendido por: ${interaction.user.id}`);
 
     // Desativa o botão de resgatar
@@ -175,7 +184,7 @@ client.on("interactionCreate", async (interaction) => {
         embeds: [
           new EmbedBuilder()
             .setTitle("📋 Avaliação - BTF")
-            .setDescription(`Avalie o atendimento clicando nas estrelas (as estrelas vão de 1 a 5):`)
+            .setDescription(`Avalie o atendimento clicando nas estrelas (⭐ as estrelas vão de 1 a 5).`)
             .setColor("#9b59b6")
         ],
         components: [row],
